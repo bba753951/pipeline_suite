@@ -62,6 +62,10 @@ def removePair(f1,f2,n):
 
     print("remain:",len(df1))
     print("remove:",count)
+
+    # add column for match hyb and clan
+    df1['on_reg_pos']=df1.apply(lambda x: "1-"+str(x['regulator_len']),axis=1)
+
     df1.to_csv(f2,header=1,index=1)
 
 
