@@ -1,5 +1,6 @@
 #!/usr/bin/awk -f
 BEGIN{
+    FS="\t"
     OFS=","
     print "sequence","read_count"
 

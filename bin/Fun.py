@@ -39,13 +39,14 @@ def splitPair(f1,f2):
     data.to_csv(f2,sep=",",index=0,header=1)
 
 
-def removePair(f1,f2,n):
+def removePair_pos(f1,f2,n):
     n=int(n)
     df1=pd.read_csv(f1,index_col="hybrid_seq")
     print(df1.head())
     print("original:",len(df1))
     groups = df1.groupby(df1.index)
     count=0
+    a=1
     
     for name,group in groups:
         if len(group) > (n/2-1) :
@@ -58,6 +59,9 @@ def removePair(f1,f2,n):
             if len(count_set) > n:
                 count+=len(group)
                 df1=df1.drop(index=[name],axis=0)
+                if a==1:
+                    group.to_csv("bbb.csv",header=1,index=1)
+                    a=0
         
 
     print("remain:",len(df1))
@@ -69,12 +73,47 @@ def removePair(f1,f2,n):
     df1.to_csv(f2,header=1,index=1)
 
 
+def removePair(f1,f2,n):
+    n=int(n)
+    df1=pd.read_csv(f1,index_col="hybrid_seq")
+    print(df1.head())
+    print("original:",len(df1))
+    groups = df1.groupby(df1.index)
+    count=0
+    a=1
+    
+    for name,group in groups:
+        if len(group) > (n/2-1) :
+            count_set=set()
+            list1=group[["regulator0","transcript0"]].values.tolist()
+            for i in list1:
+                count_set.update(i)
+
+
+            if len(count_set) > n:
+                count+=len(group)
+                df1=df1.drop(index=[name],axis=0)
+                if a==1:
+                    group.to_csv("bbb.csv",header=1,index=1)
+                    a=0
+        
+
+    print("remain:",len(df1))
+    print("remove:",count)
+
+    # add column for match hyb and clan
+    df1['on_reg_pos']=df1.apply(lambda x: "1-"+str(x['regulator_len']),axis=1)
+
+    df1.to_csv(f2,header=1,index=1)
+
 
 def main(way):
     if way == "splitPair":
         splitPair(sys.argv[2],sys.argv[3])
     elif way == "removePair":
         removePair(sys.argv[2],sys.argv[3],sys.argv[4])
+    elif way == "removePair_pos":
+        removePair_pos(sys.argv[2],sys.argv[3],sys.argv[4])
     else:
         print("No way = ",way)
 

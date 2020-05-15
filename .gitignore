@@ -9,3 +9,10 @@ bin/flex/
 bin/trim/
 CLAN_release/
 hyb-master/
+bin/com_clan
+bin/com_hyb
+bin/com_hybUA
+bin/com_pir
+bin/compare
+bin/run.sh
+bin/s52

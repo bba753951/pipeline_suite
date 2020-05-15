@@ -15,12 +15,14 @@ $(info SUITE_HOME = $(SUITE_HOME))
 
 
 CPU=$(shell cat /proc/cpuinfo | grep "processor" | wc -l)
-use_CPU = $(shell if [ $(CPU) -ge 4 ];then expr $(CPU) - 2; else echo $(CPU);fi)
+use_CPU = $(shell if [ $(CPU) -ge 15 ];then expr $(CPU) - 10; else echo $(CPU);fi)
 
 ############## PARAMETER ##############
 ## PREPROCESS 
 #
 len ?= 17
+# hybrid len <= slen (for invoiding bug of clan)
+slen ?= 100
 link ?=
 trim ?= 30
 # qc: flexbar fastx trim_galore none
@@ -56,7 +58,7 @@ hval ?= 0.1
 
 ## ANALYSE
 #
-sUp ?= -10
+sUp ?= None
 
 ########### NEED FILE ###############
 # PREPROCESS
@@ -87,6 +89,12 @@ STEP2=\
 STEP4=\
 	step4.csv
 
+STEP3=\
+	step3.csv
+
+STEP2_H=\
+	step2_addhybID.csv
+
 M_H=\
 	mergeH.csv
 
@@ -97,7 +105,7 @@ M_HR=\
 M_HRT=\
 	mergeHRT.csv
 HYBRIDS = \
-	$(COMP)_$(base_all)_hybrids.hyb
+	$(COMP)_$(base_all)_hybrids_ua.hyb
 
 HYBRIDS_CSV = \
 	$(COMP)_$(base_all)_hybrids.csv
@@ -161,7 +169,10 @@ endif
 
 %_$(STEP2): %_$(STEP1)
 	bash $(SUITE_HOME)/pir_bin/step2.sh -i $< -o $@ -T $(rc) -M $(fd)
-	awk -F, 'NR>1{print ">"NR-1"_"$$2;print $$1}' $@ > $(id)_$(FASTA)
+	wc -l $(id)_$(FASTA)
+	@echo ========== select slen=$(slen) ==============
+	awk -F, '(NR>1 && length($$1) <= $(slen)){print ">"NR-1"_"$$2;print $$1}' $@ > $(id)_$(FASTA)
+	wc -l $(id)_$(FASTA)
 	touch $(id)_$(STEP1)
 	touch $(id)_$(STEP2)
 
@@ -170,12 +181,13 @@ endif
 #
 
 ifeq ($(way),pir)
-%_$(STEP4): %_$(STEP2)
+%_$(STEP4): %_$(STEP3) $(base_tran).csv
 	@echo way=$(way)
-	# because hybrid will change,so not convenient to build first
-	bash $(SUITE_HOME)/pir_bin/step3.sh -i $(base_reg).csv -o step3.csv -r $< -m $(mis) -L $(llen) -b 1
-	bash $(SUITE_HOME)/pir_bin/step4.sh -i step3.csv -o $@ -r $(base_tran).csv -m $(mis) -b 0
+	bash $(SUITE_HOME)/pir_bin/step4.sh -i $< -o $@ -r $(word 2,$^) -m $(mis) -b 0
 	python3 $(SUITE_BIN)/Fun.py removePair $@ $@ $(hmax)
+
+%_$(STEP3): %_$(STEP2) $(base_reg).csv
+	bash $(SUITE_HOME)/pir_bin/step3.sh -i $(word 2,$^) -o $@ -r $< -m $(mis) -L $(llen) -b 1
 
 else 
 %_$(STEP4): %_$(M_HRT)
@@ -203,11 +215,15 @@ else
 	sed -i '1s/sequence/regulator_seq/' $@
 
 
-%_$(M_H): %_$(STEP2) %_$(HYBRIDS_CSV) 
+%_$(M_H): %_$(STEP2_H) %_$(HYBRIDS_CSV) 
 	@echo -----------M_H
 	bash $(SUITE_BIN)/framefunction.sh merge_csv $^ 1 1 $@ 1
 	sed -i '1s/sequence/hybrid_seq/' $@
 	wc -l $@
+
+%_$(STEP2_H): %_$(STEP2)
+	awk -F, 'BEGIN{OFS=","}{print $$0,"hybrid"NR-1}' $< > $@
+	head -n 5 $@
 
 
 ifeq ($(way),hyb)
@@ -226,6 +242,8 @@ else ifeq ($(way),clan)
 %_$(HYBRIDS_CSV): %_$(CLAN_SEQ)
 	@echo -----------transfer clan to csv
 	python3 $(SUITE_BIN)/Fun.py splitPair $< temp1.csv
+	wc -l temp1.csv
+	head -n 5 temp1.csv
 	grep "tran" temp1.csv |grep "reg" > $@
 	head -n 5 $@
 
@@ -300,11 +318,11 @@ detect: $(DETECT)
 build: $(BUILD)
 	if [ ! -e bowtieFile  ];then mkdir bowtieFile ;fi
 	#bowtie-build --threads $(use_CPU) $(base_tran)_id.fasta bowtieFile/$(base_tran).fa
-	faToTwoBit $(base_all).fasta bowtieFile/$(base_all).2bit
+	#faToTwoBit $(base_all).fasta bowtieFile/$(base_all).2bit
 	#bowtie2-build $(base_all).fasta bowtieFile/$(base_all)
-	fasta2tab.awk $(base_all).fasta > bowtieFile/$(base_all).tab
+	#fasta2tab.awk $(base_all).fasta > bowtieFile/$(base_all).tab
 	#makeblastdb -in $(base_all).fasta -dbtype nucl -input_type fasta -hash_index -out bowtieFile/$(base_all) -logfile bowtieFile/$(base_all).log
-	#$(CLAN_BIN)/clan_index -f $(base_all).fasta -d $(CLAN_R)
+	$(CLAN_BIN)/clan_index -f $(base_all).fasta -d $(CLAN_R)
 
 
 clean:
@@ -313,6 +331,6 @@ clean:
 analyse:$(ANALYSE)
 
 
-DEBUG= %_$(M_H) %_$(M_HR) %_$(M_HRT) %_$(CLAN_O)
+DEBUG= %_$(M_H) %_$(M_HR) %_$(M_HRT) %_$(CLAN_O) %_$(STEP3) %_$(CLAN_S)
 .PRECIOUS: $(in) %_$(HYBRIDS) $(DEBUG) 
 .PHONY: preprocess clean detect build analyse

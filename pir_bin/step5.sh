@@ -152,10 +152,10 @@ head -n 1 $infile | sed 's/$/,RNAup_score,RNAup_pos,RNAup_target_seq,RNAup_input
 
 if [ "$pflag" = "1" ];then
     echo --------- use parallel -----------------
-    cat $infile|sed '1d'|parallel --pipe --block 0.5M  awk -v RNA_seq=$RNA_seq -v input_seq=$input_seq -v remain_seq=$remain_seq -v remain_RNA_pos=$remain_RNA_pos -v RNA_len=$RNA_len -v input_len=$input_len -v remain_len=$remain_len -f ${shell_folder}/rnaup.awk  >> ${temp_path}/temp1.csv
+    cat $infile|sed '1d'|parallel --pipe --block 0.5M  awk -v RNA_seq=$RNA_seq -v input_seq=$input_seq -v remain_seq=$remain_seq -v remain_RNA_pos=$remain_RNA_pos -v RNA_len=$RNA_len -v input_len=$input_len -v remain_len=$remain_len -f ${shell_folder}/rnaup.awk  >> ${temp_path}/temp1.csv 2>/dev/null
 else
     echo ---------not use parallel -----------------
-    cat $infile|sed '1d'|awk -v RNA_seq=$RNA_seq -v input_seq=$input_seq -v remain_seq=$remain_seq -v remain_RNA_pos=$remain_RNA_pos -v RNA_len=$RNA_len -v input_len=$input_len -v remain_len=$remain_len -f ${shell_folder}/rnaup.awk  >> ${temp_path}/temp1.csv
+    cat $infile|sed '1d'|awk -v RNA_seq=$RNA_seq -v input_seq=$input_seq -v remain_seq=$remain_seq -v remain_RNA_pos=$remain_RNA_pos -v RNA_len=$RNA_len -v input_len=$input_len -v remain_len=$remain_len -f ${shell_folder}/rnaup.awk  >> ${temp_path}/temp1.csv 2>/dev/null
 fi
 
 
@@ -165,6 +165,7 @@ if [ "$sRnaScore" != "None" ];then
     selectSmaller RNAup_score $sRnaScore ${temp_path}/temp1.csv ${temp_path}/temp.csv
     rm ${temp_path}/temp1.csv
 else
+    echo "choose RNAup_score <= $sRnaScore"
     mv ${temp_path}/temp1.csv ${temp_path}/temp.csv
 fi
 
