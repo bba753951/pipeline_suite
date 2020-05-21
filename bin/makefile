@@ -50,7 +50,8 @@ base_all = $(base_reg)_$(base_tran)
 # 
 # way: pir hyb clan
 way ?= hyb		
-mis ?= 0
+reg_mis ?= 0
+tran_mis ?= 0
 llen ?= 17
 hmax ?= 10
 gmax ?= 4
@@ -183,11 +184,11 @@ endif
 ifeq ($(way),pir)
 %_$(STEP4): %_$(STEP3) $(base_tran).csv
 	@echo way=$(way)
-	bash $(SUITE_HOME)/pir_bin/step4.sh -i $< -o $@ -r $(word 2,$^) -m $(mis) -b 0
+	bash $(SUITE_HOME)/pir_bin/step4.sh -i $< -o $@ -r $(word 2,$^) -m $(tran_mis) -b 0
 	python3 $(SUITE_BIN)/Fun.py removePair $@ $@ $(hmax)
 
 %_$(STEP3): %_$(STEP2) $(base_reg).csv
-	bash $(SUITE_HOME)/pir_bin/step3.sh -i $(word 2,$^) -o $@ -r $< -m $(mis) -L $(llen) -b 1
+	bash $(SUITE_HOME)/pir_bin/step3.sh -i $(word 2,$^) -o $@ -r $< -m $(reg_mis) -L $(llen) -b 1
 
 else 
 %_$(STEP4): %_$(M_HRT)
@@ -304,23 +305,33 @@ $(base_reg)_id.fasta: $(base_reg).csv
 $(base_all).fasta : $(base_tran)_id.fasta $(base_reg)_id.fasta
 	cat $^ > $@
 
+transcript.csv :$(base_tran).csv
+	name_col=$$(bash $(SUITE_BIN)/framefunction.sh find_col transcript_name $<);\
+	cut -d, -f $$name_col $< > $@
+
+regulator.csv :$(base_reg).csv
+	name_col=$$(bash $(SUITE_BIN)/framefunction.sh find_col regulator_name $<);\
+	cut -d, -f $$name_col $< > $@
+
 BUILD= \
 	$(base_all).fasta \
 	$(base_tran)_id.fasta \
 	$(base_reg)_id.fasta \
 	$(base_reg).csv \
-	$(base_tran).csv
+	$(base_tran).csv \
+	transcript.csv \
+	regulator.csv
 TEMP = \
-	step3.csv temp1.csv
+	temp1.csv
 
 preprocess: $(PREPROCESS)
 detect: $(DETECT)
 build: $(BUILD)
 	if [ ! -e bowtieFile  ];then mkdir bowtieFile ;fi
-	#bowtie-build --threads $(use_CPU) $(base_tran)_id.fasta bowtieFile/$(base_tran).fa
-	#faToTwoBit $(base_all).fasta bowtieFile/$(base_all).2bit
-	#bowtie2-build $(base_all).fasta bowtieFile/$(base_all)
-	#fasta2tab.awk $(base_all).fasta > bowtieFile/$(base_all).tab
+	bowtie-build --threads $(use_CPU) $(base_tran)_id.fasta bowtieFile/$(base_tran).fa >/dev/null 2>&1
+	faToTwoBit $(base_all).fasta bowtieFile/$(base_all).2bit
+	bowtie2-build $(base_all).fasta bowtieFile/$(base_all) >/dev/null 2>&1
+	fasta2tab.awk $(base_all).fasta > bowtieFile/$(base_all).tab
 	#makeblastdb -in $(base_all).fasta -dbtype nucl -input_type fasta -hash_index -out bowtieFile/$(base_all) -logfile bowtieFile/$(base_all).log
 	$(CLAN_BIN)/clan_index -f $(base_all).fasta -d $(CLAN_R)
 
@@ -332,5 +343,6 @@ analyse:$(ANALYSE)
 
 
 DEBUG= %_$(M_H) %_$(M_HR) %_$(M_HRT) %_$(CLAN_O) %_$(STEP3) %_$(CLAN_S)
-.PRECIOUS: $(in) %_$(HYBRIDS) $(DEBUG) 
+.PRECIOUS: $(in) %_$(HYBRIDS) 
+#.PRECIOUS: $(in) %_$(HYBRIDS) $(DEBUG) 
 .PHONY: preprocess clean detect build analyse

@@ -9,7 +9,7 @@ function csvTofasta(){
     echo "transfer $1 to fasta"
     local filename=$1
     local id_name=$2
-    local outputfile=`echo $filename | sed "s/\.csv$/\.fasta/"`
+    local outputfile=`echo $filename | sed "s/\.csv$/temp\.fasta/"`
 
     # find sequence column(from framefunction.sh)
     find_col $3 $filename

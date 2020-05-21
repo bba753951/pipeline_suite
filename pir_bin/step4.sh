@@ -140,7 +140,7 @@ remain_id_col=$?
 find_col remain_seq $infile
 remain_seq_col=$?
 
-awk -F, -v id=$remain_id_col -v seq=$remain_seq_col 'NR==1 {next}{printf ">%s\n%s\n",$id,$seq}' $infile | sed "s/U/T/g" > ${temp_path}"/"${base_inp}".fasta" 
+awk -F, -v id=$remain_id_col -v seq=$remain_seq_col 'NR==1 {next}{printf ">%s\n%s\n",$id,$seq}' $infile | sed "s/U/T/g" > ${temp_path}"/"${base_inp}"temp.fasta" 
 
 
 
@@ -154,12 +154,12 @@ addID $refile transcript $id_file_ref
 echo "----------bowtie-----------------"
 if [ "$bflag" = "1" ]
 then
-    bowtie-build --threads $cpu_num $ref".fasta" "${bowtie_path}/${base_ref}.fa" 
+    bowtie-build --threads $cpu_num $ref"temp.fasta" "${bowtie_path}/${base_ref}.fa" > /dev/null 2>&1
 else
     echo "you don't use bowtie-build"
 fi
 
-bowtie --threads $cpu_num -f -a -v $mismatch --norc ${bowtie_path}/${base_ref}".fa" ${temp_path}"/"${base_inp}".fasta" $bowtie_path/Reads2.bwt
+bowtie --threads $cpu_num -f -a -v $mismatch --norc ${bowtie_path}/${base_ref}".fa" ${temp_path}"/"${base_inp}"temp.fasta" $bowtie_path/Reads2.bwt > /dev/null 2>&1
 
 
 # check the bowtie output is empty or not
@@ -197,5 +197,5 @@ echo aaa:$RNA_remain_col
 merge_csv $infile $remain_id_col $merge_RNA $RNA_remain_col $outfile
 
 
-rm ${temp_path}"/"${base_inp}".fasta" ${ref}".fasta" $merge_RNA
+rm ${temp_path}"/"${base_inp}"temp.fasta" ${ref}"temp.fasta" $merge_RNA
 

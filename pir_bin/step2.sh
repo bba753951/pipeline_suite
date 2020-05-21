@@ -111,7 +111,7 @@ csvTofasta $infile_sc RNAfold sequence
 echo "----------RNAfold-----------------"
 inp=${infile_sc%.*}
 
-rnafold $inp".fasta" $infile_sc $infile_fold
+rnafold $inp"temp.fasta" $infile_sc $infile_fold
 
 # select RNAfold_MFE score
 if [ "$sRnaScore" != "None" ];then
@@ -123,4 +123,5 @@ else
     mv $infile_fold $outfile
 fi
 
-rm $infile_sc $inp".fasta"
+rm $infile_sc $inp"temp.fasta"
+echo step2 done

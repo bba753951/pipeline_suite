@@ -149,12 +149,12 @@ echo -------------USE CPU number : ${cpu_num} ----------------
 # bowtie
 if [ "$bflag" = "1" ]
 then
-    bowtie-build --threads $cpu_num $ref".fasta" "$bowtie_path/$base_ref.fa" 
+    bowtie-build --threads $cpu_num $ref"temp.fasta" "$bowtie_path/$base_ref.fa" > /dev/null 2>&1
 else
     echo "you don't use bowtie-build"
 fi
 
-bowtie --threads $cpu_num -f -a -v $mismatch --norc $bowtie_path/$base_ref".fa" $inp".fasta" $bowtie_path/Reads.bwt
+bowtie --threads $cpu_num -f -a -v $mismatch --norc $bowtie_path/$base_ref".fa" $inp"temp.fasta" $bowtie_path/Reads.bwt > /dev/null 2>&1
 
 # check the bowtie output is empty or not
 declare -i line=0
@@ -206,6 +206,6 @@ target_pos=$?
 
 awk -v ref_seq=$ref_seq -v ref_len=$ref_len -v len=$sRemainLen -v target_pos=$target_pos -f ${shell_folder}/remain.awk $merge_hyb > $outfile
 
-rm $merge_reg $merge_hyb $inp".fasta" $ref".fasta"
+rm $merge_reg $merge_hyb $inp"temp.fasta" $ref"temp.fasta"
 
 
