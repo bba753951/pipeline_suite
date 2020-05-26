@@ -130,6 +130,6 @@ awk -f ${shell_folder}/sequence.awk ${temp_path}"/"$trimmed_input |sort| uniq -c
 # for hyb
 mv ${temp_path}"/"$trimmed_input ${temp_path}"/"$clipped_input 
 touch ${temp_path}"/"${clipped_tab}
-#sed '1d' $output|awk -F, '{print ">"NR"_"$2;print $1}' > ${temp_path}"/"${comp_fasta} 
+sed '1d' $output|awk -F, '{print ">"NR"_"$2;print $1}' > ${temp_path}"/"${comp_fasta} 
 
 

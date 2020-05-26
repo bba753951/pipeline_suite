@@ -17,3 +17,6 @@ bin/compare
 bin/run.sh
 bin/s52
 bin/com_pir_10/
+bin/compare_hyb/
+bin/pra_fastx/
+bin/pra_flexbar/

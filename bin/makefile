@@ -14,7 +14,7 @@ $(info SUITE_BIN = $(SUITE_BIN))
 $(info SUITE_HOME = $(SUITE_HOME))
 
 
-CPU=$(shell cat /proc/cpuinfo | grep "processor" | wc -l)
+CPU = $(shell cat /proc/cpuinfo | grep "processor" | wc -l)
 use_CPU = $(shell if [ $(CPU) -ge 15 ];then expr $(CPU) - 10; else echo $(CPU);fi)
 
 ############## PARAMETER ##############
@@ -76,10 +76,10 @@ FASTA = \
 TAB2 = \
 	$(COMP).tab
 
-STEP1=\
+STEP1 = \
 	step1.csv
 
-STEP2=\
+STEP2 = \
 	step2.csv
 
 
@@ -87,23 +87,23 @@ STEP2=\
 
 ## DETECT
 #
-STEP4=\
+STEP4 = \
 	step4.csv
 
-STEP3=\
+STEP3 = \
 	step3.csv
 
-STEP2_H=\
+STEP2_H = \
 	step2_addhybID.csv
 
-M_H=\
+M_H = \
 	mergeH.csv
 
 
-M_HR=\
+M_HR = \
 	mergeHR.csv
 
-M_HRT=\
+M_HRT = \
 	mergeHRT.csv
 HYBRIDS = \
 	$(COMP)_$(base_all)_hybrids_ua.hyb
@@ -126,19 +126,19 @@ CLAN_SEQ = \
 
 ## ANALYSE
 #
-STEP5=\
+STEP5 = \
 	step5.csv
 
 ########### OUTPUT FILE #################
-PREPROCESS =\
+PREPROCESS = \
 	$(id)_$(FASTQ) \
 	$(id)_$(STEP1) \
 	$(id)_$(STEP2)
 
-DETECT =\
+DETECT = \
 	$(id)_$(STEP4)
 
-ANALYSE =\
+ANALYSE = \
 	$(id)_$(STEP5)
 
 
@@ -162,13 +162,20 @@ else ifeq ($(qc),trim_galore)
 
 else
 %_$(FASTQ): $(read)
+	@echo ========== make $@ from $< ================
 	hyb preprocess qc=$(qc) trim=$(trim) len=$(len) link=$(link) in=$<
+
 %_$(STEP1): %_$(FASTA)
+	@echo ========== make $@ from $< ================
 	awk -f $(SUITE_BIN)/comp2csv.awk $< > $@
 endif
 
+%_$(FASTA):
+	@echo -----------$@ let make can file the target------------
+
 
 %_$(STEP2): %_$(STEP1)
+	@echo ========== make $@ from $< ================
 	bash $(SUITE_HOME)/pir_bin/step2.sh -i $< -o $@ -T $(rc) -M $(fd)
 	wc -l $(id)_$(FASTA)
 	@echo ========== select slen=$(slen) ==============
@@ -294,6 +301,7 @@ endif
 # id_fasta
 $(base_tran).csv : $(tran)
 	awk -v id=transcript -v out=$(base_tran)_id.fasta -f $(SUITE_BIN)/fasta2IDfasta.awk $< > $@
+
 $(base_tran)_id.fasta: $(base_tran).csv
 
 $(base_reg).csv : $(reg)
@@ -313,7 +321,7 @@ regulator.csv :$(base_reg).csv
 	name_col=$$(bash $(SUITE_BIN)/framefunction.sh find_col regulator_name $<);\
 	cut -d, -f $$name_col $< > $@
 
-BUILD= \
+BUILD = \
 	$(base_all).fasta \
 	$(base_tran)_id.fasta \
 	$(base_reg)_id.fasta \
@@ -325,15 +333,17 @@ TEMP = \
 	temp1.csv
 
 preprocess: $(PREPROCESS)
+
 detect: $(DETECT)
+
 build: $(BUILD)
 	if [ ! -e bowtieFile  ];then mkdir bowtieFile ;fi
 	bowtie-build --threads $(use_CPU) $(base_tran)_id.fasta bowtieFile/$(base_tran).fa >/dev/null 2>&1
 	faToTwoBit $(base_all).fasta bowtieFile/$(base_all).2bit
 	bowtie2-build $(base_all).fasta bowtieFile/$(base_all) >/dev/null 2>&1
 	fasta2tab.awk $(base_all).fasta > bowtieFile/$(base_all).tab
-	#makeblastdb -in $(base_all).fasta -dbtype nucl -input_type fasta -hash_index -out bowtieFile/$(base_all) -logfile bowtieFile/$(base_all).log
 	$(CLAN_BIN)/clan_index -f $(base_all).fasta -d $(CLAN_R)
+	#makeblastdb -in $(base_all).fasta -dbtype nucl -input_type fasta -hash_index -out bowtieFile/$(base_all) -logfile bowtieFile/$(base_all).log
 
 
 clean:
@@ -342,7 +352,7 @@ clean:
 analyse:$(ANALYSE)
 
 
-DEBUG= %_$(M_H) %_$(M_HR) %_$(M_HRT) %_$(CLAN_O) %_$(STEP3) %_$(CLAN_S)
-.PRECIOUS: $(in) %_$(HYBRIDS) 
+DEBUG = %_$(M_H) %_$(M_HR) %_$(M_HRT) %_$(CLAN_O) %_$(STEP3) %_$(CLAN_S)
+.PRECIOUS: $(in) %_$(HYBRIDS) %_$(FASTA) 
 #.PRECIOUS: $(in) %_$(HYBRIDS) $(DEBUG) 
 .PHONY: preprocess clean detect build analyse
