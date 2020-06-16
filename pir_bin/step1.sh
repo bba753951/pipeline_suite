@@ -120,9 +120,9 @@ echo $trimmed_input
 
 
 if [ ! $trimmed_seq ];then
-    trim_galore --length $length --dont_gzip -o $temp_path $input -q $phred_score 
+    trim_galore --length $length --dont_gzip -o $temp_path -q $phred_score $input 
 else
-    trim_galore --length $length --dont_gzip -a $trimmed_seq -o $temp_path $input -q $phred_score
+    trim_galore --length $length --dont_gzip -a $trimmed_seq -o $temp_path -q $phred_score $input
 fi
 
 awk -f ${shell_folder}/sequence.awk ${temp_path}"/"$trimmed_input |sort| uniq -c |awk -v OFS="," 'BEGIN{print "sequence,read_count"}{print $2,$1}' > $output

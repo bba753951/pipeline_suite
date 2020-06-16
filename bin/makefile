@@ -13,7 +13,7 @@ endif
 $(info SUITE_BIN = $(SUITE_BIN))
 $(info SUITE_HOME = $(SUITE_HOME))
 
-
+time_command=/usr/bin/time -f "\t%E real,\t%U user,\t%S sys" -a -o $(time_log)
 CPU = $(shell cat /proc/cpuinfo | grep "processor" | wc -l)
 use_CPU = $(shell if [ $(CPU) -ge 15 ];then expr $(CPU) - 10; else echo $(CPU);fi)
 
@@ -49,13 +49,14 @@ base_all = $(base_reg)_$(base_tran)
 ## DETECT 
 # 
 # way: pir hyb clan
-way ?= hyb		
+way ?= hyb
 reg_mis ?= 0
 tran_mis ?= 0
 llen ?= 17
 hmax ?= 10
 gmax ?= 4
 hval ?= 0.1
+pref ?= none
 
 ## ANALYSE
 #
@@ -107,6 +108,7 @@ M_HRT = \
 	mergeHRT.csv
 HYBRIDS = \
 	$(COMP)_$(base_all)_hybrids_ua.hyb
+	#$(COMP)_$(base_all)_hybrids.hyb
 
 HYBRIDS_CSV = \
 	$(COMP)_$(base_all)_hybrids.csv
@@ -130,6 +132,7 @@ STEP5 = \
 	step5.csv
 
 ########### OUTPUT FILE #################
+time_log = $(id)_time.log
 PREPROCESS = \
 	$(id)_$(FASTQ) \
 	$(id)_$(STEP1) \
@@ -163,7 +166,7 @@ else ifeq ($(qc),trim_galore)
 else
 %_$(FASTQ): $(read)
 	@echo ========== make $@ from $< ================
-	hyb preprocess qc=$(qc) trim=$(trim) len=$(len) link=$(link) in=$<
+	 HYB_THREADS=$(use_CPU) hyb preprocess qc=$(qc) trim=$(trim) len=$(len) link=$(link) in=$<
 
 %_$(STEP1): %_$(FASTA)
 	@echo ========== make $@ from $< ================
@@ -191,11 +194,13 @@ endif
 ifeq ($(way),pir)
 %_$(STEP4): %_$(STEP3) $(base_tran).csv
 	@echo way=$(way)
-	bash $(SUITE_HOME)/pir_bin/step4.sh -i $< -o $@ -r $(word 2,$^) -m $(tran_mis) -b 0
+	@echo -e "\n\n ======pir step4 time ============ " >> $(time_log)
+	$(time_command) bash $(SUITE_HOME)/pir_bin/step4.sh -i $< -o $@ -r $(word 2,$^) -m $(tran_mis) -b 0
 	python3 $(SUITE_BIN)/Fun.py removePair $@ $@ $(hmax)
 
 %_$(STEP3): %_$(STEP2) $(base_reg).csv
-	bash $(SUITE_HOME)/pir_bin/step3.sh -i $(word 2,$^) -o $@ -r $< -m $(reg_mis) -L $(llen) -b 1
+	@echo -e "\n\n ======pir step3 time ============ " >> $(time_log)
+	$(time_command) bash $(SUITE_HOME)/pir_bin/step3.sh -i $(word 2,$^) -o $@ -r $< -m $(reg_mis) -L $(llen) -b 1
 
 else 
 %_$(STEP4): %_$(M_HRT)
@@ -243,7 +248,8 @@ ifeq ($(way),hyb)
 
 %_$(HYBRIDS):
 	@echo ---------------hyb detect
-	HYB_DB=./bowtieFile hyb detect align=bowtie2 in=$(in) db=$(base_all) pref=none hmax=$(hmax) gmax=$(gmax) hval=$(hval) 
+	@echo -e "\n\n ======hyb detect time ============ " >> $(time_log)
+	HYB_DB=./bowtieFile  HYB_THREADS=$(use_CPU) $(time_command) hyb detect align=bowtie2 in=$(in) db=$(base_all) pref=$(pref) hmax=$(hmax) gmax=$(gmax) hval=$(hval) 
 
 
 else ifeq ($(way),clan)
@@ -272,13 +278,25 @@ else ifeq ($(way),clan)
 
 
 %_$(CLAN_O): %_$(CLAN_S) %_$(FASTA)
-	$(CLAN_BIN)/clan_output -i $< -o $@ -f $(base_all).fasta -r $(word 2,$^)
+	@echo -e "\n\n ======clan_output time ============ ">> $(time_log)
+	#if [ ! -e split_clan_Out ];then mkdir split_clan_Out;fi
+	#$(time_command) ls split_clan_out/ |xargs -I {} bash -c "echo {}; $(CLAN_BIN)/clan_output -i split_clan_out/{} -o split_clan_Out/{} -f $(base_all).fasta -r split_clan/{}"
+	#cat split_clan_Out/* > $@
+	$(time_command) $(CLAN_BIN)/clan_output -i $< -o $@ -f $(base_all).fasta -r $(word 2,$^)
 	head -n 2 $@
 	wc -l $@
 
 
 %_$(CLAN_S): %_$(FASTA) 
-	$(CLAN_BIN)/clan_search -r $< -d $(CLAN_R) -o $@ -f $(base_all).fasta -s -t $(use_CPU) -m $(hmax) -l $(llen) -v $(gmax)
+	@echo -e "\n\n ======clan_search time ============ ">> $(time_log)
+	$(time_command) $(CLAN_BIN)/clan_search -r $< -d $(CLAN_R) -o $@ -f $(base_all).fasta -s -t $(use_CPU) -m $(hmax) -l $(llen) -v $(gmax)
+	#if [ ! -e split_clan ];then mkdir split_clan;fi
+	#if [ ! -e split_clan_out ];then mkdir split_clan_out;fi
+	#split -l 10000 $< split_clan/$<
+	#$(time_command) ls split_clan/ |xargs -I {} $(CLAN_BIN)/clan_search -r split_clan/{} -d $(CLAN_R) -o split_clan_out/{} -f $(base_all).fasta -s -t $(use_CPU) -m $(hmax) -l $(llen) -v $(gmax)
+	#cat split_clan_out/* > $@
+	wc -l $@
+
 
 
 #else
@@ -290,7 +308,8 @@ endif
 ## ANALYSE
 #
 %_$(STEP5): %_$(STEP4)
-	bash $(SUITE_HOME)/pir_bin/step5.sh -i $< -o $@ -N $(sUp) -g None -p 1
+	@echo -e "\n\n ======$(way) RNAup time ============ ">> $(time_log)
+	$(time_command) bash $(SUITE_HOME)/pir_bin/step5.sh -i $< -o $@ -N $(sUp) -g None -p 1
 
 
 ## BUILD
@@ -338,11 +357,14 @@ detect: $(DETECT)
 
 build: $(BUILD)
 	if [ ! -e bowtieFile  ];then mkdir bowtieFile ;fi
-	bowtie-build --threads $(use_CPU) $(base_tran)_id.fasta bowtieFile/$(base_tran).fa >/dev/null 2>&1
+	@echo -e "\n\n ======bowtie time ============ ">> $(time_log)
+	$(time_command) bowtie-build --threads $(use_CPU) $(base_tran)_id.fasta bowtieFile/$(base_tran).fa >/dev/null 2>&1
 	faToTwoBit $(base_all).fasta bowtieFile/$(base_all).2bit
-	bowtie2-build $(base_all).fasta bowtieFile/$(base_all) >/dev/null 2>&1
+	@echo -e "\n\n ======bowtie2 time ============ ">> $(time_log)
+	$(time_command) bowtie2-build $(base_all).fasta bowtieFile/$(base_all) >/dev/null 
 	fasta2tab.awk $(base_all).fasta > bowtieFile/$(base_all).tab
-	$(CLAN_BIN)/clan_index -f $(base_all).fasta -d $(CLAN_R)
+	@echo -e "\n\n ======clan_index time ============ ">> $(time_log)
+	$(time_command) $(CLAN_BIN)/clan_index -f $(base_all).fasta -d $(CLAN_R)
 	#makeblastdb -in $(base_all).fasta -dbtype nucl -input_type fasta -hash_index -out bowtieFile/$(base_all) -logfile bowtieFile/$(base_all).log
 
 
@@ -352,7 +374,8 @@ clean:
 analyse:$(ANALYSE)
 
 
-DEBUG = %_$(M_H) %_$(M_HR) %_$(M_HRT) %_$(CLAN_O) %_$(STEP3) %_$(CLAN_S)
+DEBUG = %_$(STEP3) %_$(CLAN_SEQ) %_$(CLAN_O)
+#DEBUG = %_$(M_H) %_$(M_HR) %_$(M_HRT) %_$(STEP3) %_$(CLAN_SEQ) %_$(CLAN_O)
 .PRECIOUS: $(in) %_$(HYBRIDS) %_$(FASTA) 
-#.PRECIOUS: $(in) %_$(HYBRIDS) $(DEBUG) 
+#.PRECIOUS: $(in) %_$(HYBRIDS) %_$(FASTA) $(DEBUG) 
 .PHONY: preprocess clean detect build analyse
