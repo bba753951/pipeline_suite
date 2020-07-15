@@ -5,12 +5,14 @@ BEGIN {
     btn=0
 }
 {
-    if (substr($0,1,1 )== "@" && btn == 0){
-
-        btn =1
-    }else if(btn ==1){
-        btn = 0
+    if ( btn == 1){
         print $0 
+        btn++
+    }else if(btn == 3){
+        btn=0
+    }else{
+        btn++
     }
 
 }
+#/^@/

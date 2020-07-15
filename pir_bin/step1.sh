@@ -119,11 +119,20 @@ echo $trimmed_input
 
 
 
-if [ ! $trimmed_seq ];then
+if test "$trimmed_seq" == "" -o "$trimmed_seq" == "None";then
+
     trim_galore --length $length --dont_gzip -o $temp_path -q $phred_score $input 
+
 else
+
     trim_galore --length $length --dont_gzip -a $trimmed_seq -o $temp_path -q $phred_score $input
+
 fi
+
+head ${temp_path}"/"$trimmed_input
+
+echo ========
+awk -f ${shell_folder}/sequence.awk ${temp_path}"/"$trimmed_input |sort| uniq -c |head
 
 awk -f ${shell_folder}/sequence.awk ${temp_path}"/"$trimmed_input |sort| uniq -c |awk -v OFS="," 'BEGIN{print "sequence,read_count"}{print $2,$1}' > $output
 

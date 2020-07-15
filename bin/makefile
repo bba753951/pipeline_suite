@@ -23,7 +23,7 @@ use_CPU = $(shell if [ $(CPU) -ge 15 ];then expr $(CPU) - 10; else echo $(CPU);f
 len ?= 17
 # hybrid len <= slen (for invoiding bug of clan)
 slen ?= 100
-link ?=
+link ?= None
 trim ?= 30
 # qc: flexbar fastx trim_galore none
 qc ?= flexbar

@@ -88,9 +88,9 @@ def pvalue(f1,f2,outf,kind):
 
     outf.write(prefix_f1+"  "+prefix_f2+"\n")
     outf.write("-"*20+"\n")
-    outf.write('%-20s %15.2f %15.2f %15.2f\n' %("KS_test",KStest[0],KStest[1],KStest[2]))
-    outf.write('%-20s %15.2f %15.2f %15.2f\n' %("T_test",Ttest[0],Ttest[1],Ttest[2]))
-    outf.write('%-20s %15.2f %15.2f %15.2f\n' %("U_test",Utest[0],Utest[1],Utest[2]))
+    outf.write('%-20s %20s %20s %20s\n' %("KS_test",KStest[0],KStest[1],KStest[2]))
+    outf.write('%-20s %20s %20s %20s\n' %("T_test",Ttest[0],Ttest[1],Ttest[2]))
+    outf.write('%-20s %20s %20s %20s\n' %("U_test",Utest[0],Utest[1],Utest[2]))
     outf.write("\n\n")
 
 def countUp(df1):
@@ -110,17 +110,39 @@ def boxPlot(f1,f2,f3,jobID,kind):
     df2=pd.read_csv(kind+f2,sep="\t",header=None)
     df3=pd.read_csv(kind+f3,sep="\t",header=None)
     res = pd.concat([df1,df2,df3],axis=1)
+    f1=f1.replace(".tab","")
+    f2=f2.replace(".tab","")
+    f3=f3.replace(".tab","")
+    # res.columns=[f1.replace(".tab",""),f2.replace(".tab",""),f3.replace(".tab","")]
     res.columns=[f1,f2,f3]
     print("Filename:",jobID)
     print("kind:",kind)
     print("mean:")
     print(res.mean())
 
-    res.plot(kind='box', notch=False, grid=True,showmeans=True)
-    plt.title(jobID)
-    plt.savefig('plot/{}boxPlot.png'.format(kind))
+    # res.plot(kind='box', notch=False, grid=True,showmeans=True)
+    # plt.title(jobID)
+    # plt.savefig('plot/{}boxPlot.png'.format(kind))
 
 
+    f=res.boxplot(return_type='dict',patch_artist=True, notch=False, grid=True,showmeans=True,meanline=False,showbox=True,showfliers=True,whis=[0,100])
+    for box in f['boxes']:
+        box.set( color='black', linewidth=1 )
+        box.set(facecolor='pink', alpha=0.8) 
+
+    for whisker in f['whiskers']:
+        whisker.set(color='k', linewidth=1, linestyle='--')
+
+    for cap in f['caps']:
+        cap.set(color='gray', linewidth=2)
+    for median in f['medians']:
+        median.set(color='orange', linewidth=2)
+    for flier in f['fliers']:
+        flier.set(marker='o', color='y', alpha=0.7)
+    plt.title("{}({})".format(jobID,kind))
+    plt.ylabel("RNAup sore")
+    plt.savefig('plot/{}_boxPlot.png'.format(kind))
+##############################################
     c1 = countUp(df1)
     c2 = countUp(df2)
     c3 = countUp(df3)
@@ -146,6 +168,7 @@ def boxPlot(f1,f2,f3,jobID,kind):
 
     plt.savefig('plot/{}sep_scatter.png'.format(kind))
 
+###########################################
     plt.figure()
     plt.hist(df1.values,cumulative=True, density=1, bins=df1.shape[0],histtype='step',label=f1)
     plt.hist(df2.values,cumulative=True, density=1, bins=df2.shape[0],histtype='step',label=f2)
@@ -250,11 +273,11 @@ def pAll(data1,data2):
     # print("KS_test\t",KStest)
     # print("T_test\t",Ttest)
     # print("U_test\t",Utest)
-    print('%-20s %15.2f %15.2f %15.2f\n' %("KS_test",KStest[0],KStest[1],KStest[2]))
-    print('%-20s %15.2f %15.2f %15.2f\n' %("T_test",Ttest[0],Ttest[1],Ttest[2]))
-    print('%-20s %15.2f %15.2f %15.2f\n' %("U_test",Utest[0],Utest[1],Utest[2]))
+    print('%-20s %20s %20s %20s\n' %("KS_test",KStest[0],KStest[1],KStest[2]))
+    print('%-20s %20s %20s %20s\n' %("T_test",Ttest[0],Ttest[1],Ttest[2]))
+    print('%-20s %20s %20s %20s\n' %("U_test",Utest[0],Utest[1],Utest[2]))
 
-def affectBoxplot(len_data,data_count,kind,jobID,filt,columns,kind2):
+def affectBar(len_data,data_count,kind,jobID,filt,columns,kind2):
     plt.figure(figsize=(10,4))
     Y=np.array(len_data)
     X=np.arange(data_count)
@@ -271,9 +294,42 @@ def affectBoxplot(len_data,data_count,kind,jobID,filt,columns,kind2):
 
     print(kind2)
     for i in range(data_count):
-        print("%.2f"%(len_data[i]/alll*100))
+        print("%s(%.2f"%(len_data[i],len_data[i]/alll*100))
         if i == data_count - 1:
             break
+
+def ori_affectBar(len_data,ori_data,data_count,kind,jobID,filt,columns,kind2):
+    plt.figure(figsize=(10,4))
+    np_len=np.array(len_data)
+    np_ori=np.array(ori_data)
+    print("\n\nori_select",ori_data)
+    print("hits_select",len_data)
+    Y=np_len/np_ori*100
+    X=np.arange(data_count)
+    plt.bar(X,Y,width = 0.5, facecolor = '#009FCC', edgecolor= 'black')
+    alll=Y[0]
+    for i, j in zip(X, Y):
+        plt.text(i-0.2, j+alll*0.01, '%.2f %s'%(j,"%"), color='red')
+    plt.title("{}({})".format(jobID,kind))
+    plt.xlabel("{}({} equal)".format(kind,filt))
+    plt.ylabel("hits percent")
+    plt.xticks(range(data_count),columns)
+    plt.savefig('plot/hits_{}_bar_{}.png'.format(kind,kind2))
+
+    print("------------hits persent of {}-----------".format(kind2))
+    print(kind2)
+    fp=open("hits_{}".format(kind),"w")
+    fp.write(jobID[-2:]+",")
+    for i in range(data_count):
+        print("%.3f"%(Y[i]))
+        if i < data_count-1:
+            fp.write("%.3f,"%(Y[i]))
+        else:
+            fp.write("%.3f\n"%(Y[i]))
+
+    fp.close()
+
+        
 
 
 #kind
@@ -281,23 +337,38 @@ def affectBoxplot(len_data,data_count,kind,jobID,filt,columns,kind2):
 # 1 for readcount
 def Affect(way,jobID,filterArray,kind):
     df = pd.read_csv("/home/bba753951/Django/master_project/media/uploadfile/{}/{}/hyb_file_step5.csv".format(jobID,way),usecols=["hybrid_seq","regulator_name","transcript_name","RNAup_pos","RNAup_score","RNAfold_MFE","read_count"])
-    df=df.drop_duplicates(subset=None, keep='first', inplace=False)
+    step2df = pd.read_csv("/home/bba753951/Django/master_project/media/uploadfile/{}/hyb_file_step2.csv".format(jobID),usecols=["RNAfold_MFE","read_count"])
+    # df=df.drop_duplicates(subset=None, keep='first', inplace=False)
+    print("original step2 count",len(step2df))
     if kind=="read_count":
+        filt="greater"
         df1=df.loc[:,["read_count","RNAup_score","hybrid_seq"]]
         fold0=df1["read_count"] >= filterArray[0]
         fold5=df1["read_count"] >= filterArray[1]
         fold10=df1["read_count"] >= filterArray[2]
         fold15=df1["read_count"] >= filterArray[3]
         fold20=df1["read_count"] >= filterArray[4]
-        filt="greater"
+
+        ori0=step2df["read_count"] >= filterArray[0]
+        ori5=step2df["read_count"] >= filterArray[1]
+        ori10=step2df["read_count"] >= filterArray[2]
+        ori15=step2df["read_count"] >= filterArray[3]
+        ori20=step2df["read_count"] >= filterArray[4]
+
     elif kind=="RNAfold":
+        filt="less"
         df1=df.loc[:,["RNAfold_MFE","RNAup_score","hybrid_seq"]]
         fold0=df1["RNAfold_MFE"] <= filterArray[0]
         fold5=df1["RNAfold_MFE"] <= filterArray[1]
         fold10=df1["RNAfold_MFE"] <= filterArray[2]
         fold15=df1["RNAfold_MFE"] <= filterArray[3]
         fold20=df1["RNAfold_MFE"] <= filterArray[4]
-        filt="less"
+
+        ori0=step2df["RNAfold_MFE"] <= filterArray[0]
+        ori5=step2df["RNAfold_MFE"] <= filterArray[1]
+        ori10=step2df["RNAfold_MFE"] <= filterArray[2]
+        ori15=step2df["RNAfold_MFE"] <= filterArray[3]
+        ori20=step2df["RNAfold_MFE"] <= filterArray[4]
     else:
         print("error kind")
         raise ValueError
@@ -308,6 +379,12 @@ def Affect(way,jobID,filterArray,kind):
     pdata_f5=df1[(fold5)]
     pdata_f0=df1[(fold0)]
 
+
+    count_ori_f15=len(step2df[(ori15)])
+    count_ori_f10=len(step2df[(ori10)])
+    count_ori_f20=len(step2df[(ori20)])
+    count_ori_f5=len(step2df[(ori5)])
+    count_ori_f0=len(step2df[(ori0)])
 
     data_f15=pdata_f15.loc[:,"RNAup_score"]
     data_f10=pdata_f10.loc[:,"RNAup_score"]
@@ -340,9 +417,18 @@ def Affect(way,jobID,filterArray,kind):
     data_count=len(all_data)
     columns=list(map(str,filterArray))
 
+    len_ori=[]
 
-    affectBoxplot(len_data,data_count,kind,jobID,filt,columns,"pair")
-    affectBoxplot(len_hyb,hyb_count,kind,jobID,filt,columns,"sequence")
+    all_count_ori=[count_ori_f0,count_ori_f5,count_ori_f10,count_ori_f15,count_ori_f20]
+
+    affectBar(len_data,data_count,kind,jobID,filt,columns,"pair")
+    # remain read which can make pair
+    affectBar(len_hyb,hyb_count,kind,jobID,filt,columns,"sequence")
+    # remain original CLASH read
+    affectBar(all_count_ori,hyb_count,kind,jobID,filt,columns,"\'CLASH read\'")
+
+    # ori_affectBar(len_data,all_count_ori,data_count,kind,jobID,filt,columns,"pair")
+    ori_affectBar(len_hyb,all_count_ori,hyb_count,kind,jobID,filt,columns,"sequence")
 
     plt.figure(figsize=(10,4))
     res = pd.concat(all_data,axis=1)
@@ -388,10 +474,7 @@ def Affect(way,jobID,filterArray,kind):
 
 def select3(way,jobID):
     df = pd.read_csv("/home/bba753951/Django/master_project/media/uploadfile/{}/{}/hyb_file_step5.csv".format(jobID,way),usecols=["hybrid_seq","regulator_name","transcript_name","RNAup_pos","RNAup_score"])
-    # print(df.shape)
-    df=df.drop_duplicates(subset=None, keep='first', inplace=False)
-    # print(df.shape)
-    # print(df.head(3))
+    # df=df.drop_duplicates(subset=None, keep='first', inplace=False)
 
     df1=df.loc[:,["hybrid_seq","regulator_name","transcript_name"]]
     df1.to_csv(way+".tab",index=0,header=0,sep="\t")
@@ -446,7 +529,7 @@ def main(number):
             select3(i,jobID)
     elif number=="boxplot":
         boxPlot(f1,f2,f3,jobID,"up_")
-        boxPlot(f1,f2,f3,jobID,"fold_")
+        # boxPlot(f1,f2,f3,jobID,"fold_")
     elif number=="pvalue":
         outfile = open("up_pvalue.txt","w")
         outfile.write("======= File name:{} ========\n".format(sys.argv[2]))

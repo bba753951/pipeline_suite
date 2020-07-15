@@ -21,3 +21,10 @@ bin/compare_hyb/
 bin/pra_fastx/
 bin/pra_flexbar/
 bin/[G,S]*
+bin/up_10/
+bin/up_5/
+bin/up_15/
+bin/real_pair/
+bin/*.png
+bin/*.tab
+bin/length/
