@@ -166,6 +166,10 @@ else ifeq ($(qc),trim_galore)
 %_$(FASTQ): $(read)
 	bash $(SUITE_HOME)/pir_bin/step1.sh -i $< -a $(link) -l $(len) -o $(id)_$(STEP1) -q $(trim) -u $(use_trim)
 
+%_$(STEP1):
+	touch $@
+
+
 else
 %_$(FASTQ): $(read)
 	@echo ========== make $@ from $< ================
@@ -322,7 +326,7 @@ endif
 # csv:id,name,seq,len
 # id_fasta
 $(base_tran).csv : $(tran)
-	awk -v id=transcript -v out=$(base_tran)_id.fasta -f $(SUITE_BIN)/fsta2IDfasta.awk $< > $@
+	awk -v id=transcript -v out=$(base_tran)_id.fasta -f $(SUITE_BIN)/fasta2IDfasta.awk $< > $@
 
 $(base_tran)_id.fasta: $(base_tran).csv
 
@@ -362,7 +366,7 @@ build: $(BUILD)
 	if [ ! -e bowtieFile  ];then mkdir bowtieFile ;fi
 	@echo -e "\n\n ======bowtie time ============ ">> $(time_log)
 	$(time_command) bowtie-build --threads $(use_CPU) $(base_tran)_id.fasta bowtieFile/$(base_tran).fa >/dev/null 2>&1
-	faToTwoBit $(base_all).fasta bowtieFile/$(base_all).2bit
+	#faToTwoBit $(base_all).fasta bowtieFile/$(base_all).2bit
 	@echo -e "\n\n ======bowtie2 time ============ ">> $(time_log)
 	$(time_command) bowtie2-build $(base_all).fasta bowtieFile/$(base_all) >/dev/null 
 	$(HYB_BIN)/fasta2tab.awk $(base_all).fasta > bowtieFile/$(base_all).tab

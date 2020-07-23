@@ -1,4 +1,8 @@
 data/
+hyb-master/data/db/* 
+hyb-master/data/fastq/*
+hyb-master/data/fastqc/*
+hyb-master/data/linker/*
 bin/*.fastq
 bin/*.mk
 bin/*.fasta
