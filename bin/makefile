@@ -6,6 +6,7 @@ SUITE_BIN := $(shell dirname $(realpath $(MAKEFILE_LIST)))
 SUITE_HOME := $(shell dirname $(SUITE_BIN))
 #HYB_BIN := $(SUITE_HOME)/hyb-master/bin
 CLAN_BIN := $(SUITE_HOME)/CLAN_release/bin
+CLAN_BIN := $(SUITE_HOME)/CLAN_release/bin
 
 ifeq ($(SUITE_HOME),.)
 	SUITE_HOME := ..
@@ -25,6 +26,7 @@ len ?= 17
 slen ?= 100
 link ?= None
 trim ?= 30
+use_trim ?= 1
 # qc: flexbar fastx trim_galore none
 qc ?= flexbar
 in ?=
@@ -161,7 +163,7 @@ ifeq ($(qc),none)
 
 else ifeq ($(qc),trim_galore)
 %_$(FASTQ): $(read)
-	bash $(SUITE_HOME)/pir_bin/step1.sh -i $< -a $(link) -l $(len) -o $(id)_$(STEP1) -q $(trim)
+	bash $(SUITE_HOME)/pir_bin/step1.sh -i $< -a $(link) -l $(len) -o $(id)_$(STEP1) -q $(trim) -u $(use_trim)
 
 else
 %_$(FASTQ): $(read)

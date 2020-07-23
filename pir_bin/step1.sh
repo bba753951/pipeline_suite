@@ -21,6 +21,7 @@ fi
 length=17
 output="step1.csv"
 phred_score=20
+use_trim=1
 
 
 # -h option
@@ -52,7 +53,7 @@ exit 1
 
 # get options
 #-----------------------------------
-while getopts ":i:o:l:a:q:h" opt
+while getopts ":i:o:l:a:q:u:h" opt
 do
 	case $opt in
 		h)
@@ -73,6 +74,10 @@ do
         q)
             phred_score=$OPTARG
             ;;
+        u)
+            use_trim=$OPTARG
+            ;;
+
 		*)
 			echo -e "$0: invalid option -- 'x'\nTry '$0 -h' for more information."
             exit 1
@@ -118,21 +123,21 @@ echo $trimmed_input
 
 
 
+if test "$use_trim" == "1";then
 
-if test "$trimmed_seq" == "" -o "$trimmed_seq" == "None";then
+    if test "$trimmed_seq" == "" -o "$trimmed_seq" == "None";then
 
-    trim_galore --length $length --dont_gzip -o $temp_path -q $phred_score $input 
+        trim_galore --length $length --dont_gzip -o $temp_path -q $phred_score $input 
 
+    else
+
+        trim_galore --length $length --dont_gzip -a $trimmed_seq -o $temp_path -q $phred_score $input
+
+    fi
 else
-
-    trim_galore --length $length --dont_gzip -a $trimmed_seq -o $temp_path -q $phred_score $input
-
+    echo "Not use trim_galore"
+    cp $input $trimmed_input
 fi
-
-head ${temp_path}"/"$trimmed_input
-
-echo ========
-awk -f ${shell_folder}/sequence.awk ${temp_path}"/"$trimmed_input |sort| uniq -c |head
 
 awk -f ${shell_folder}/sequence.awk ${temp_path}"/"$trimmed_input |sort| uniq -c |awk -v OFS="," 'BEGIN{print "sequence,read_count"}{print $2,$1}' > $output
 
