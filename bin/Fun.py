@@ -80,7 +80,6 @@ def removePair(f1,f2,n):
     print("original:",len(df1))
     groups = df1.groupby(df1.index)
     count=0
-    a=1
     
     for name,group in groups:
         if len(group) > (n/2-1) :
@@ -93,9 +92,6 @@ def removePair(f1,f2,n):
             if len(count_set) > n:
                 count+=len(group)
                 df1=df1.drop(index=[name],axis=0)
-                if a==1:
-                    group.to_csv("bbb.csv",header=1,index=1)
-                    a=0
         
 
     print("remain:",len(df1))

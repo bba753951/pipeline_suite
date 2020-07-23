@@ -5,7 +5,8 @@ unexport MAKEFLAGS
 SUITE_BIN := $(shell dirname $(realpath $(MAKEFILE_LIST)))
 SUITE_HOME := $(shell dirname $(SUITE_BIN))
 #HYB_BIN := $(SUITE_HOME)/hyb-master/bin
-CLAN_BIN := $(SUITE_HOME)/CLAN_release/bin
+HYB_RUN := $(SUITE_HOME)/hyb-master/bin/hyb
+HYB_BIN := $(SUITE_HOME)/hyb-master/bin
 CLAN_BIN := $(SUITE_HOME)/CLAN_release/bin
 
 ifeq ($(SUITE_HOME),.)
@@ -168,7 +169,7 @@ else ifeq ($(qc),trim_galore)
 else
 %_$(FASTQ): $(read)
 	@echo ========== make $@ from $< ================
-	 HYB_THREADS=$(use_CPU) hyb preprocess qc=$(qc) trim=$(trim) len=$(len) link=$(link) in=$<
+	 HYB_THREADS=$(use_CPU) $(HYB_RUN) preprocess qc=$(qc) trim=$(trim) len=$(len) link=$(link) in=$<
 
 %_$(STEP1): %_$(FASTA)
 	@echo ========== make $@ from $< ================
@@ -251,7 +252,7 @@ ifeq ($(way),hyb)
 %_$(HYBRIDS):
 	@echo ---------------hyb detect
 	@echo -e "\n\n ======hyb detect time ============ " >> $(time_log)
-	HYB_DB=./bowtieFile  HYB_THREADS=$(use_CPU) $(time_command) hyb detect align=bowtie2 in=$(in) db=$(base_all) pref=$(pref) hmax=$(hmax) gmax=$(gmax) hval=$(hval) 
+	HYB_DB=./bowtieFile  HYB_THREADS=$(use_CPU) $(time_command) $(HYB_RUN) detect align=bowtie2 in=$(in) db=$(base_all) pref=$(pref) hmax=$(hmax) gmax=$(gmax) hval=$(hval) 
 
 
 else ifeq ($(way),clan)
@@ -321,7 +322,7 @@ endif
 # csv:id,name,seq,len
 # id_fasta
 $(base_tran).csv : $(tran)
-	awk -v id=transcript -v out=$(base_tran)_id.fasta -f $(SUITE_BIN)/fasta2IDfasta.awk $< > $@
+	awk -v id=transcript -v out=$(base_tran)_id.fasta -f $(SUITE_BIN)/fsta2IDfasta.awk $< > $@
 
 $(base_tran)_id.fasta: $(base_tran).csv
 
@@ -364,7 +365,7 @@ build: $(BUILD)
 	faToTwoBit $(base_all).fasta bowtieFile/$(base_all).2bit
 	@echo -e "\n\n ======bowtie2 time ============ ">> $(time_log)
 	$(time_command) bowtie2-build $(base_all).fasta bowtieFile/$(base_all) >/dev/null 
-	fasta2tab.awk $(base_all).fasta > bowtieFile/$(base_all).tab
+	$(HYB_BIN)/fasta2tab.awk $(base_all).fasta > bowtieFile/$(base_all).tab
 	@echo -e "\n\n ======clan_index time ============ ">> $(time_log)
 	$(time_command) $(CLAN_BIN)/clan_index -f $(base_all).fasta -d $(CLAN_R)
 	#makeblastdb -in $(base_all).fasta -dbtype nucl -input_type fasta -hash_index -out bowtieFile/$(base_all) -logfile bowtieFile/$(base_all).log

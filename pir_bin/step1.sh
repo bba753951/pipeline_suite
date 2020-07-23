@@ -136,7 +136,7 @@ if test "$use_trim" == "1";then
     fi
 else
     echo "Not use trim_galore"
-    cp $input $trimmed_input
+    cp $input ${temp_path}"/"$trimmed_input
 fi
 
 awk -f ${shell_folder}/sequence.awk ${temp_path}"/"$trimmed_input |sort| uniq -c |awk -v OFS="," 'BEGIN{print "sequence,read_count"}{print $2,$1}' > $output
