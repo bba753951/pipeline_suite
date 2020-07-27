@@ -22,47 +22,69 @@ use_CPU = $(shell if [ $(CPU) -ge 15 ];then expr $(CPU) - 10; else echo $(CPU);f
 ############## PARAMETER ##############
 ## PREPROCESS 
 #
+# hybrid len >= len 
 len ?= 17
-# hybrid len <= slen (for invoiding bug of clan)
+# hybrid len <= slen 
 slen ?= 100
+# adapter
 link ?= None
+#phred score
 trim ?= 30
+# use trim_galore or not
 use_trim ?= 1
 # qc: flexbar fastx trim_galore none
 qc ?= flexbar
+# clash read file
 in ?=
 # read_count >=
 rc ?= None
 # RNAfold_MFE <=
 fd ?= None
 
+# after trimming, clash read output file name
 ALL = clipped_qf
+# after trimming, clash read unique file
 COMP = comp
+# same as clash read file
 read = $(in)
+# record ClASH read file base name
 id = $(notdir $(basename $(read)))
 
 ## BUILD
 #
+# regulatory RNA file name
 reg ?=
+# transcript RNA file name
 tran ?=
+# regulatory RNA file base name
 base_reg = $(notdir $(basename $(reg)))
+# transcript RNA file base name
 base_tran = $(notdir $(basename $(tran)))
+# for merge regulatory RNA and transcript file name
 base_all = $(base_reg)_$(base_tran)
 
 ## DETECT 
 # 
 # way: pir hyb clan
 way ?= hyb
+# align to regulator mismatch
 reg_mis ?= 0
+# align to transcript mismatch
 tran_mis ?= 0
+# remaining sequence length
 llen ?= 17
+# hits per read
 hmax ?= 10
+# overlap between two fragments
 gmax ?= 4
+# for hyb e-value
 hval ?= 0.1
+# for hyb preference mim,none
 pref ?= none
 
 ## ANALYSE
 #
+#select RNAup score <=
 sUp ?= None
 
 ########### NEED FILE ###############
@@ -162,6 +184,7 @@ ifeq ($(qc),none)
 %_$(FASTQ): 
 	[ $(in) != $@ ] && ln -sf $(in) $@
 
+# if use trim_galore, use pir_bin step1 shell
 else ifeq ($(qc),trim_galore)
 %_$(FASTQ): $(read)
 	bash $(SUITE_HOME)/pir_bin/step1.sh -i $< -a $(link) -l $(len) -o $(id)_$(STEP1) -q $(trim) -u $(use_trim)
@@ -169,12 +192,13 @@ else ifeq ($(qc),trim_galore)
 %_$(STEP1):
 	touch $@
 
-
+# if use fastx,flexbar, use hyb detect function
 else
 %_$(FASTQ): $(read)
 	@echo ========== make $@ from $< ================
 	 HYB_THREADS=$(use_CPU) $(HYB_RUN) preprocess qc=$(qc) trim=$(trim) len=$(len) link=$(link) in=$<
 
+# trans hyb output to pir step1 output
 %_$(STEP1): %_$(FASTA)
 	@echo ========== make $@ from $< ================
 	awk -f $(SUITE_BIN)/comp2csv.awk $< > $@
@@ -183,7 +207,7 @@ endif
 %_$(FASTA):
 	@echo -----------$@ let make can file the target------------
 
-
+# step2 is for calculating RNAfold
 %_$(STEP2): %_$(STEP1)
 	@echo ========== make $@ from $< ================
 	bash $(SUITE_HOME)/pir_bin/step2.sh -i $< -o $@ -T $(rc) -M $(fd)
@@ -198,18 +222,23 @@ endif
 ## DETECT
 #
 
+# use pir to find RNA-RNA pair
+# use pir step4 to use remaining find transcript 
 ifeq ($(way),pir)
 %_$(STEP4): %_$(STEP3) $(base_tran).csv
 	@echo way=$(way)
 	@echo -e "\n\n ======pir step4 time ============ " >> $(time_log)
 	$(time_command) bash $(SUITE_HOME)/pir_bin/step4.sh -i $< -o $@ -r $(word 2,$^) -m $(tran_mis) -b 0
+	# remove RNA-RNA pair for hits per read parameter
 	python3 $(SUITE_BIN)/Fun.py removePair $@ $@ $(hmax)
 
+# use pir step3 to find regulator on clash read
 %_$(STEP3): %_$(STEP2) $(base_reg).csv
 	@echo -e "\n\n ======pir step3 time ============ " >> $(time_log)
 	$(time_command) bash $(SUITE_HOME)/pir_bin/step3.sh -i $(word 2,$^) -o $@ -r $< -m $(reg_mis) -L $(llen) -b 1
 
 else 
+# add remaining,hybrid information,for same file format as pir step4
 %_$(STEP4): %_$(M_HRT)
 	@echo way=$(way)
 	hyb_col=$$(bash $(SUITE_BIN)/framefunction.sh find_col hybrid_seq $<);\
@@ -219,6 +248,8 @@ else
 
 #not use 1 to merge_csv bcuz order of col will confuse
 #(if the col is not the first col of first file)   
+
+# merge transcript information
 %_$(M_HRT): %_$(M_HR) $(base_tran).csv
 	@echo ----------M_HRT
 	col1=$$(bash $(SUITE_BIN)/framefunction.sh find_col transcript0 $<);\
@@ -226,7 +257,7 @@ else
 	bash $(SUITE_BIN)/framefunction.sh merge_csv $^ $$col1 $$col2 $@ 0
 	sed -i '1s/sequence/transcript_seq/' $@
 
-
+# merge regulator RNA information
 %_$(M_HR): %_$(M_H) $(base_reg).csv
 	@echo ------------M_HR
 	col1=$$(bash $(SUITE_BIN)/framefunction.sh find_col regulator0 $<);\
@@ -234,25 +265,26 @@ else
 	bash $(SUITE_BIN)/framefunction.sh merge_csv $^ $$col1 $$col2 $@ 0
 	sed -i '1s/sequence/regulator_seq/' $@
 
-
+# merge STEP2_H(step2 add hybrid id) and hyb output (csv)
 %_$(M_H): %_$(STEP2_H) %_$(HYBRIDS_CSV) 
 	@echo -----------M_H
 	bash $(SUITE_BIN)/framefunction.sh merge_csv $^ 1 1 $@ 1
 	sed -i '1s/sequence/hybrid_seq/' $@
 	wc -l $@
 
+# add hybrid0(id) to step2 output
 %_$(STEP2_H): %_$(STEP2)
 	awk -F, 'BEGIN{OFS=","}{print $$0,"hybrid"NR-1}' $< > $@
 	head -n 5 $@
 
-
+# transform hyb to csv,and select (transcript)-(regulator) pair
 ifeq ($(way),hyb)
 %_$(HYBRIDS_CSV): %_$(HYBRIDS)
 	@echo -----------transfer hyb to csv
 	awk -f $(SUITE_BIN)/hyb2csv.awk $< |grep "tran"|grep "reg"> $@
 	wc -l $@
 
-
+# use hyb detect to find RNA-RNA pair
 %_$(HYBRIDS):
 	@echo ---------------hyb detect
 	@echo -e "\n\n ======hyb detect time ============ " >> $(time_log)
@@ -260,15 +292,15 @@ ifeq ($(way),hyb)
 
 
 else ifeq ($(way),clan)
+# use transfer clan to csv output,and find (transcript)-(regualtor) pair
 %_$(HYBRIDS_CSV): %_$(CLAN_SEQ)
-	@echo -----------transfer clan to csv
 	python3 $(SUITE_BIN)/Fun.py splitPair $< temp1.csv
 	wc -l temp1.csv
 	head -n 5 temp1.csv
 	grep "tran" temp1.csv |grep "reg" > $@
 	head -n 5 $@
 
-
+# replace first line of clan output by clash read sequence
 %_$(CLAN_SEQ): %_$(TAB2) %_$(CLAN_O)
 	LC_ALL=C join -t$$'\t' -1 1 -2 1 \
 		<(LC_ALL=C sort -t$$'\t' -k 1,1 $<)\
@@ -278,12 +310,12 @@ else ifeq ($(way),clan)
 	wc -l $@
 	head -n3 $@
 
-
+# transform clash read fasta to tab output
 %_$(TAB2): %_$(FASTA)
 	awk -f $(SUITE_BIN)/fasta2tab.awk $< > $@
 	head -n 3 $@
 
-
+# use clan_output to transform clan_search output
 %_$(CLAN_O): %_$(CLAN_S) %_$(FASTA)
 	@echo -e "\n\n ======clan_output time ============ ">> $(time_log)
 	#if [ ! -e split_clan_Out ];then mkdir split_clan_Out;fi
@@ -293,7 +325,7 @@ else ifeq ($(way),clan)
 	head -n 2 $@
 	wc -l $@
 
-
+# use clan_search to find RNA-RNA pair
 %_$(CLAN_S): %_$(FASTA) 
 	@echo -e "\n\n ======clan_search time ============ ">> $(time_log)
 	$(time_command) $(CLAN_BIN)/clan_search -r $< -d $(CLAN_R) -o $@ -f $(base_all).fasta -s -t $(use_CPU) -m $(hmax) -l $(llen) -v $(gmax)
@@ -312,7 +344,7 @@ endif
 endif
 
 
-## ANALYSE
+## RNAup ANALYSE
 #
 %_$(STEP5): %_$(STEP4)
 	@echo -e "\n\n ======$(way) RNAup time ============ ">> $(time_log)
@@ -335,7 +367,7 @@ $(base_reg).csv : $(reg)
 
 $(base_reg)_id.fasta: $(base_reg).csv
 
-#merge reg tran for hyb/clan
+#merge regulator and  transcript file for hyb/clan
 $(base_all).fasta : $(base_tran)_id.fasta $(base_reg)_id.fasta
 	cat $^ > $@
 
@@ -362,6 +394,7 @@ preprocess: $(PREPROCESS)
 
 detect: $(DETECT)
 
+# for build reference
 build: $(BUILD)
 	if [ ! -e bowtieFile  ];then mkdir bowtieFile ;fi
 	@echo -e "\n\n ======bowtie time ============ ">> $(time_log)
@@ -383,6 +416,6 @@ analyse:$(ANALYSE)
 
 DEBUG = %_$(STEP3) %_$(CLAN_SEQ) %_$(CLAN_O)
 #DEBUG = %_$(M_H) %_$(M_HR) %_$(M_HRT) %_$(STEP3) %_$(CLAN_SEQ) %_$(CLAN_O)
-.PRECIOUS: $(in) %_$(HYBRIDS) %_$(FASTA) 
+.PRECIOUS: $(in) %_$(HYBRIDS) %_$(FASTA) %_$(CLAN_SEQ) 
 #.PRECIOUS: $(in) %_$(HYBRIDS) %_$(FASTA) $(DEBUG) 
 .PHONY: preprocess clean detect build analyse
