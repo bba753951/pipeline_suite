@@ -66,6 +66,7 @@ base_all = $(base_reg)_$(base_tran)
 ## DETECT 
 # 
 # way: pir hyb clan
+align ?= bowtie2
 way ?= hyb
 # align to regulator mismatch
 reg_mis ?= 0
@@ -288,7 +289,7 @@ ifeq ($(way),hyb)
 %_$(HYBRIDS):
 	@echo ---------------hyb detect
 	@echo -e "\n\n ======hyb detect time ============ " >> $(time_log)
-	HYB_DB=./bowtieFile  HYB_THREADS=$(use_CPU) $(time_command) $(HYB_RUN) detect align=bowtie2 in=$(in) db=$(base_all) pref=$(pref) hmax=$(hmax) gmax=$(gmax) hval=$(hval) 
+	HYB_DB=./bowtieFile  HYB_THREADS=$(use_CPU) $(time_command) $(HYB_RUN) detect align=$(align) in=$(in) db=$(base_all) pref=$(pref) hmax=$(hmax) gmax=$(gmax) hval=$(hval) 
 
 
 else ifeq ($(way),clan)
@@ -399,13 +400,13 @@ build: $(BUILD)
 	if [ ! -e bowtieFile  ];then mkdir bowtieFile ;fi
 	@echo -e "\n\n ======bowtie time ============ ">> $(time_log)
 	$(time_command) bowtie-build --threads $(use_CPU) $(base_tran)_id.fasta bowtieFile/$(base_tran).fa >/dev/null 2>&1
-	#faToTwoBit $(base_all).fasta bowtieFile/$(base_all).2bit
 	@echo -e "\n\n ======bowtie2 time ============ ">> $(time_log)
 	$(time_command) bowtie2-build $(base_all).fasta bowtieFile/$(base_all) >/dev/null 
 	$(HYB_BIN)/fasta2tab.awk $(base_all).fasta > bowtieFile/$(base_all).tab
 	@echo -e "\n\n ======clan_index time ============ ">> $(time_log)
 	$(time_command) $(CLAN_BIN)/clan_index -f $(base_all).fasta -d $(CLAN_R)
 	#makeblastdb -in $(base_all).fasta -dbtype nucl -input_type fasta -hash_index -out bowtieFile/$(base_all) -logfile bowtieFile/$(base_all).log
+	#faToTwoBit $(base_all).fasta bowtieFile/$(base_all).2bit
 
 
 clean:
