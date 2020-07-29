@@ -190,7 +190,7 @@ function rnaup(RNA_slice_seq, input_seq, RNA_start, RNA_seq, RNA_len, input_len,
     }
 }
 
-function rnaup_score(RNA_seq, RNA_len, RNA_start, RNA_end, input_seq, old,up_result,__ARGVEND__,sequence,cmd,count,res){
+function rnaup_score(RNA_seq, RNA_len, RNA_start, RNA_end, input_seq, old,up_result,__ARGVEND__,sequence,cmd,count,res,seq1,seq2){
     #print "rnaup_score"
 
     RNA_start=(RNA_start < 1)? 1 : RNA_start
@@ -207,9 +207,31 @@ function rnaup_score(RNA_seq, RNA_len, RNA_start, RNA_end, input_seq, old,up_res
     close(cmd)
     split(var,res," ")
     up_result4=substr(res[5],2)
-    print old,up_result4,up_result[1],up_result[2],up_result[3]
 
+
+    # remove bulge at regulator front and end
+    # remember seq2 need to be reverse
+    seq1=up_result[2]
+    seq2=up_result[3]
+
+    front=index(seq2,"-")
+    while(front == 1){
+        seq1=substr(seq1,1,length(seq1)-1)
+        seq2=substr(seq2,2)
+        front=index(seq2,"-")
     }
+
+    back=substr(seq2,length(seq2))
+    while (back == "-"){
+        seq1=substr(seq1,2)
+        seq2=substr(seq2,1,length(seq2)-1)
+        back=substr(seq2,length(seq2))
+    }
+
+
+    print old,up_result4,up_result[1],seq1,seq2
+
+}
 
 
 function etd_seq(RNA_seq, input_seq, remain_seq, remain_RNA_pos, RNA_len, input_len, remain_len, old,__ARGVEND__,pos,pos1,pos2,final_remain_len,final_remain_seq,etd1,etd2,lim_len1,lim_len2){
